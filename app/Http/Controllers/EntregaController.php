@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 use Automattic\WooCommerce\Client;
 use Illuminate\Http\Request;
-
+use Response;
 class EntregaController extends Controller
 {
     /**
@@ -22,7 +22,26 @@ class EntregaController extends Controller
 
         $orders1 = $woocommerce->get('orders', $parameters= ['status' => 'processing,completed']);
 
-        return $orders1;
+        $data = array_map(function ($length) {
+            $place = ['id' => $length->id,
+                      'estado' => $length->status,
+                      'envia' => [
+                         'primer_nombre' =>  $length->billing->first_name,
+                         'segundo_nombre' => $length->billing->last_name,
+                         'direccion' => $length->billing->address_1.", ".$length->billing->city." (". $length->billing->address_2 .")",
+                         'correo' => $length->billing->email,
+                         'telefono' => $length->billing->phone,
+                      ]];
+            return $place;
+        }, $orders1);
+
+
+        
+                  
+        return Response::json(
+            array('success' => true,
+                  'data' => $data),200
+        );
 
     }
 
