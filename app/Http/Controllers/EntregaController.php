@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Automattic\WooCommerce\Client;
 use Illuminate\Http\Request;
 use Response;
+use Tymon\JWTAuth\Facades\JWTAuth;
 class EntregaController extends Controller
 {
     /**
@@ -13,35 +14,48 @@ class EntregaController extends Controller
      */
     public function index()
     {
+        $user = JWTAuth::user();
         $woocommerce = new Client(env('API_WOOCOMMERCE_URL'), env('API_WOOCOMMERCE_CLIENT'), env('API_WOOCOMMERCE_PASSWORD'),
             [
                 'wp_api' => true,
                 'version' => 'wc/v3',
             ]
         );
+        if($user->privilegio_id == 1){
+            $getOrdenesDeCompra = $woocommerce->get('orders', $parameters= ['status' => 'processing,completed']);
+            $data = array_map(function ($length) {
+                $place = ['id' => $length->id,
+                        'estado' => $length->status,
+                        'fecha_entrega' => $length->meta_data[array_search("fecha-de-entrega", array_column($length->meta_data, 'key'), true)]->value,
+                        'hora_entrega' => $length->meta_data[array_search("hora-de-entrega", array_column($length->meta_data, 'key'), true)]->value,
+                        'envia' => [
+                            'nombre' =>  $length->billing->first_name,
+                            'apellido' => $length->billing->last_name,
+                            'direccion' => $length->billing->address_1.", ".$length->billing->city." (". $length->billing->address_2 .")",
+                            'correo' => $length->billing->email,
+                            'telefono' => $length->billing->phone,
+                        ],
+                        'recibe' => [
+                            'nombre' => $length->shipping->first_name,
+                            'apellido' => $length->shipping->last_name,
+                            'comuna' => $length->shipping->state,
+                            'direccion' => $length->shipping->address_1.", ".$length->shipping->city." (". $length->shipping->address_2 .")",
+                        ]];
+                return $place;
+            }, $getOrdenesDeCompra);
 
-        $orders1 = $woocommerce->get('orders', $parameters= ['status' => 'processing,completed']);
-
-        $data = array_map(function ($length) {
-            $place = ['id' => $length->id,
-                      'estado' => $length->status,
-                      'envia' => [
-                         'primer_nombre' =>  $length->billing->first_name,
-                         'segundo_nombre' => $length->billing->last_name,
-                         'direccion' => $length->billing->address_1.", ".$length->billing->city." (". $length->billing->address_2 .")",
-                         'correo' => $length->billing->email,
-                         'telefono' => $length->billing->phone,
-                      ]];
-            return $place;
-        }, $orders1);
-
+            return Response::json(
+                array('success' => true,
+                    'data' => $data),200
+            );
+        }else{
+            return Response::json(
+                array('success' => false,
+                      'data' => "Usuario Sin Privilegios"),400
+            );
+        }
 
         
-                  
-        return Response::json(
-            array('success' => true,
-                  'data' => $data),200
-        );
 
     }
 
