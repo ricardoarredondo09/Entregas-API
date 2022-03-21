@@ -5,6 +5,7 @@ use Automattic\WooCommerce\Client;
 use Illuminate\Http\Request;
 use Response;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\DB;
 class EntregaController extends Controller
 {
     /**
@@ -14,49 +15,52 @@ class EntregaController extends Controller
      */
     public function index()
     {
+        //Obtener Usuario Autentificado
         $user = JWTAuth::user();
+
+        //Realizar conexion con Wocommerce
         $woocommerce = new Client(env('API_WOOCOMMERCE_URL'), env('API_WOOCOMMERCE_CLIENT'), env('API_WOOCOMMERCE_PASSWORD'),
             [
                 'wp_api' => true,
                 'version' => 'wc/v3',
             ]
         );
+
+        //Validar Privilegios de usuarios
         if($user->privilegio_id == 1){
             $getOrdenesDeCompra = $woocommerce->get('orders', $parameters= ['status' => 'processing,completed']);
-            $data = array_map(function ($length) {
-                $place = ['id' => $length->id,
-                        'estado' => $length->status,
-                        'fecha_entrega' => $length->meta_data[array_search("fecha-de-entrega", array_column($length->meta_data, 'key'), true)]->value,
-                        'hora_entrega' => $length->meta_data[array_search("hora-de-entrega", array_column($length->meta_data, 'key'), true)]->value,
-                        'envia' => [
-                            'nombre' =>  $length->billing->first_name,
-                            'apellido' => $length->billing->last_name,
-                            'direccion' => $length->billing->address_1.", ".$length->billing->city." (". $length->billing->address_2 .")",
-                            'correo' => $length->billing->email,
-                            'telefono' => $length->billing->phone,
-                        ],
-                        'recibe' => [
-                            'nombre' => $length->shipping->first_name,
-                            'apellido' => $length->shipping->last_name,
-                            'comuna' => $length->shipping->state,
-                            'direccion' => $length->shipping->address_1.", ".$length->shipping->city." (". $length->shipping->address_2 .")",
-                        ]];
-                return $place;
-            }, $getOrdenesDeCompra);
-
-            return Response::json(
-                array('success' => true,
-                    'data' => $data),200
-            );
         }else{
-            return Response::json(
-                array('success' => false,
-                      'data' => "Usuario Sin Privilegios"),400
-            );
+            $entregasAsigandas = DB::table('entregas')->where('user_id', 1)->pluck('id_pedido')->toArray();
+            $getOrdenesDeCompra = $woocommerce->get('orders', $parameters= ['status' => 'processing,completed', 'include' => $entregasAsigandas ]);    
         }
+       
+        //Filtar y ordenar datos necesarios
+        $data = array_map(function ($length) {
+            $place = ['id' => $length->id,
+                    'estado' => $length->status,
+                    'fecha_entrega' => $length->meta_data[array_search("fecha-de-entrega", array_column($length->meta_data, 'key'), true)]->value,
+                    'hora_entrega' => $length->meta_data[array_search("hora-de-entrega", array_column($length->meta_data, 'key'), true)]->value,
+                    'envia' => [
+                        'nombre' =>  $length->billing->first_name,
+                        'apellido' => $length->billing->last_name,
+                        'direccion' => $length->billing->address_1.", ".$length->billing->city." (". $length->billing->address_2 .")",
+                        'correo' => $length->billing->email,
+                        'telefono' => $length->billing->phone,
+                    ],
+                    'recibe' => [
+                        'nombre' => $length->shipping->first_name,
+                        'apellido' => $length->shipping->last_name,
+                        'comuna' => $length->shipping->state,
+                        'direccion' => $length->shipping->address_1.", ".$length->shipping->city." (". $length->shipping->address_2 .")",
+                    ]];
+            return $place;
+        }, $getOrdenesDeCompra);
 
-        
-
+        //Retornar Pedidos
+        return Response::json(
+            array('success' => true,
+                'data' => $data),200
+        );
     }
 
     /**
