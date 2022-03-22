@@ -32,7 +32,7 @@ return [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app'),
+            'root' => storage_path('app/img'),
         ],
 
         'public' => [
@@ -52,6 +52,11 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
         ],
+        'images' => [
+            'driver' => 'local',
+            'root' => public_path('img'),
+            'visibility' => 'public',
+          ],
 
     ],
 

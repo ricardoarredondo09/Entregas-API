@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Response;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\DB;
+use App\Mail\NotificarEntrega;
+use Mail;
 class EntregaController extends Controller
 {
     /**
@@ -30,10 +32,22 @@ class EntregaController extends Controller
         if($user->privilegio_id == 1){
             $getOrdenesDeCompra = $woocommerce->get('orders', $parameters= ['status' => 'processing,completed']);
         }else{
-            $entregasAsigandas = DB::table('entregas')->where('user_id', 1)->pluck('id_pedido')->toArray();
-            $getOrdenesDeCompra = $woocommerce->get('orders', $parameters= ['status' => 'processing,completed', 'include' => $entregasAsigandas ]);    
+            $entregasAsigandas = DB::table('entregas')->where('user_id', $user->id)->pluck('id_pedido')->toArray();
+
+            //Verificar si El usuario tiene pedidos asignados
+            if(count($entregasAsigandas) != 0)
+            {
+                $getOrdenesDeCompra = $woocommerce->get('orders', $parameters= ['status' => 'processing,completed', 'include' => $entregasAsigandas ]); 
+            }else{
+                //Retornar Mensaje sin Pedidos
+                return Response::json(
+                    array('success' => false,
+                        'data' => [],
+                        'mensaje' => 'Sin Pedidos Asignados'),200
+                );
+            }    
         }
-       
+
         //Filtar y ordenar datos necesarios
         $data = array_map(function ($length) {
             $place = ['id' => $length->id,
@@ -59,20 +73,12 @@ class EntregaController extends Controller
         //Retornar Pedidos
         return Response::json(
             array('success' => true,
-                'data' => $data),200
+                'data' => $data,
+                'mensaje' => 'Pedidos Obtenidos con Exito'),200
         );
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
+ 
     /**
      * Store a newly created resource in storage.
      *
@@ -81,7 +87,16 @@ class EntregaController extends Controller
      */
     public function store(Request $request)
     {
-        //
+
+        $request->request->add(['image' => $request->image->store('')]);
+        Mail::to("ricard.arredondo@gmail.com")->send(new NotificarEntrega($request));
+
+        return Response::json(
+            array('success' => true,
+                'data' =>"s"),200
+        );
+       
+
     }
 
     /**

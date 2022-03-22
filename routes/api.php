@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['middleware' => ['jwt']], function() {
     Route::get('/pedidos', 'App\Http\Controllers\EntregaController@index');
+    Route::post('/entregar', 'App\Http\Controllers\EntregaController@store');
 });
 
 
