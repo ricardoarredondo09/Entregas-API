@@ -46,8 +46,8 @@
 	[Pedido #550] (05-05-2021)</h2>
 
 <div style="margin-bottom: 40px;">
-<img src="{{$message->embed(storage_path('app/img/QYMRbCL6M9srHS1fHF9JBAVj6zaADskCw1j4iKcA.png'))}}">
-	<img src="http://18.118.134.159/{{storage_path('app/img/QYMRbCL6M9srHS1fHF9JBAVj6zaADskCw1j4iKcA.png')}}" width="500px">
+<img src="{{$message->embed(storage_path('app/img/'.$msg->imagen))}}" width="500px">
+
 </div>
 
 

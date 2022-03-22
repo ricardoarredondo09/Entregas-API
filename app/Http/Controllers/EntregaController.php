@@ -87,13 +87,101 @@ class EntregaController extends Controller
      */
     public function store(Request $request)
     {
+        //Obtener Usuario Autentificado
+        $user = JWTAuth::user();
 
-        $request->request->add(['image' => $request->image->store('')]);
-        Mail::to("ricard.arredondo@gmail.com")->send(new NotificarEntrega($request));
+        //Variables de respuestas
+        $success = true;
+        $data = [];
+        $message = "";
+        $codigoRespuesta= 200;
+
+        //Completar Entrega
+        $completarEntrega = false;
+
+        //Realizar conexion con Wocommerce
+        $woocommerce = new Client(env('API_WOOCOMMERCE_URL'), env('API_WOOCOMMERCE_CLIENT'), env('API_WOOCOMMERCE_PASSWORD'),
+            [
+                'wp_api' => true,
+                'version' => 'wc/v3',
+            ]
+        );
+
+        //Validar ID
+        if($request->id != null){
+
+            //Validar tipo de usuario
+            if($user->privilegio_id == 2){
+                //Buscar asignacíon de orden por usuario
+                $orden = DB::table('entregas')->where('user_id', $user->id)->where('id_pedido', $request->id )->get();
+                if (!count($orden)){
+                    $success = false;
+                    $data = [];
+                    $message = "Pedido no se encuentra asignado al usuario";
+                    $codigoRespuesta= 401;
+                }else{
+                    $completarEntrega = true;
+                }
+            }else if ($user->privilegio_id == 1){
+                $completarEntrega = true;
+            }
+        }else{
+            $success = false;
+            $data = [];
+            $message = "Debe Ingresar Id de la orden";
+            $codigoRespuesta= 401;
+        }
+
+        if($completarEntrega){
+            $success = true;
+            $data = [];
+            $message = "Entrega Completada";
+            $codigoRespuesta= 200;
+
+            //Data -> Status
+            $data = [
+                'status' => 'completed'
+            ];
+
+            //Modificar estado de orden
+            $orden = $woocommerce->put('orders/'.$request->id, $data);
+
+            $data = ['id' => $orden->id,
+            'estado' => $orden->status,
+            'fecha_entrega' => $orden->meta_data[array_search("fecha-de-entrega", array_column($orden->meta_data, 'key'), true)]->value,
+            'hora_entrega' => $orden->meta_data[array_search("hora-de-entrega", array_column($orden->meta_data, 'key'), true)]->value,
+            'envia' => [
+                'nombre' =>  $orden->billing->first_name,
+                'apellido' => $orden->billing->last_name,
+                'direccion' => $orden->billing->address_1.", ".$orden->billing->city." (". $orden->billing->address_2 .")",
+                'correo' => $orden->billing->email,
+                'telefono' => $orden->billing->phone,
+            ],
+            'recibe' => [
+                'nombre' => $orden->shipping->first_name,
+                'apellido' => $orden->shipping->last_name,
+                'comuna' => $orden->shipping->state,
+                'direccion' => $orden->shipping->address_1.", ".$orden->shipping->city." (". $orden->shipping->address_2 .")",
+            ]];
+
+            if($data != []){
+                //Falta Validar que la orden no se entrego antes
+
+                //Guardar imagen
+                $request->request->add(['imagen' => $request->image->store('')]);
+                $success = true;
+                $message = "Orden Entregada con Exito";
+                //Enviar Correo
+                Mail::to($data["envia"]["correo"])->send(new NotificarEntrega($request));
+            }
+            
+        }
+
 
         return Response::json(
-            array('success' => true,
-                'data' =>"s"),200
+            array('success' => $success,
+                  'data' => $data,
+                  'message' => $message),$codigoRespuesta
         );
        
 
