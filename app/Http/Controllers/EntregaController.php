@@ -7,6 +7,7 @@ use Response;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\DB;
 use App\Mail\NotificarEntrega;
+use App\Models\HistorialEntrega;
 use Mail;
 class EntregaController extends Controller
 {
@@ -132,7 +133,10 @@ class EntregaController extends Controller
             $codigoRespuesta= 401;
         }
 
-        if($completarEntrega){
+        //Validar que la orden no se entrego antes
+        $getOrdenInHistorial = DB::table('historial_entregas')->where('id_pedido', $request->id)->exists();
+
+        if($completarEntrega && !$getOrdenInHistorial){
             $success = true;
             $data = [];
             $message = "Entrega Completada";
@@ -165,13 +169,20 @@ class EntregaController extends Controller
             ]];
 
             if($data != []){
-                //Falta Validar que la orden no se entrego antes
-
                 //Guardar imagen
                 if($request->image){
                     $request->request->add(['imagen' => $request->image->store('')]);
                 }
-               
+                
+                //Guardar historial de entrega
+                $historia = new HistorialEntrega;
+                $historia->id_pedido = $request->id;
+                $historia->imagen = is_string($request->imagen) ? $request->imagen :'';
+                $historia->ip =  $request->ip();
+                $historia->user_id =  $user->id;
+                $historia->save();
+
+
                 //Datos Para correo
                 $request->request->add(['nombreRemitente' => $data['envia']['nombre']]);
                 $request->request->add(['numeroPedido' => $data['id']]);
@@ -181,8 +192,14 @@ class EntregaController extends Controller
 
                 //Enviar Correo
                 Mail::to($data["envia"]["correo"])->send(new NotificarEntrega($request));
+                Mail::to('ventas@desayunosyregalosvalparaiso.com')->send(new NotificarEntrega($request));
             }
             
+        }else{
+            $success = false;
+            $data = [];
+            $message = "Esta Orden ya fue entregada";
+            $codigoRespuesta= 401;
         }
 
 

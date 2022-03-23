@@ -15,6 +15,14 @@ class CreateHistorialEntregasTable extends Migration
     {
         Schema::create('historial_entregas', function (Blueprint $table) {
             $table->id();
+            $table->integer('id_pedido')->unique();
+            $table->string('imagen');
+            $table->string('ip');
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')
+                    ->references('id')
+                    ->on('users')
+                    ->onCascade('cascade');
             $table->timestamps();
         });
     }
