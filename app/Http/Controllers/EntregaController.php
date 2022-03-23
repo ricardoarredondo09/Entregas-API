@@ -168,9 +168,17 @@ class EntregaController extends Controller
                 //Falta Validar que la orden no se entrego antes
 
                 //Guardar imagen
-                $request->request->add(['imagen' => $request->image->store('')]);
+                if($request->image){
+                    $request->request->add(['imagen' => $request->image->store('')]);
+                }
+               
+                //Datos Para correo
+                $request->request->add(['nombreRemitente' => $data['envia']['nombre']]);
+                $request->request->add(['numeroPedido' => $data['id']]);
+                $request->request->add(['fecha' => date('d-m-Y')]);
                 $success = true;
                 $message = "Orden Entregada con Exito";
+
                 //Enviar Correo
                 Mail::to($data["envia"]["correo"])->send(new NotificarEntrega($request));
             }

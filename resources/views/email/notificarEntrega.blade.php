@@ -39,19 +39,18 @@
 														<td valign="top" style="padding: 48px 48px 32px;">
 															<div id="body_content_inner" style='color: #636363; font-family: "Helvetica Neue", Helvetica, Roboto, Arial, sans-serif; font-size: 14px; line-height: 150%; text-align: left;'>
 
-<p style="margin: 0 0 16px;">Hola Ricardo,</p>
-<p style="margin: 0 0 16px;">Nuestro equipo acaba de realizar la entrega de su pedido. Muchas Gracias por confiar en nosotros</p>
+																<p style="margin: 0 0 16px;">Hola {{$msg->nombreRemitente}},</p>
+																<p style="margin: 0 0 16px;">Nuestro equipo acaba de realizar la entrega de su pedido. Muchas Gracias por confiar en nosotros</p>
 
-<h2 style='color: #96588a; display: block; font-family: "Helvetica Neue", Helvetica, Roboto, Arial, sans-serif; font-size: 18px; font-weight: bold; line-height: 130%; margin: 0 0 18px; text-align: left;'>
-	[Pedido #550] (05-05-2021)</h2>
+																<h2 style='color: #96588a; display: block; font-family: "Helvetica Neue", Helvetica, Roboto, Arial, sans-serif; font-size: 18px; font-weight: bold; line-height: 130%; margin: 0 0 18px; text-align: left;'>
+																	[Pedido #{{$msg->numeroPedido}}] ({{$msg->fecha}})</h2>
 
-<div style="margin-bottom: 40px;">
-<img src="{{$message->embed(storage_path('app/img/'.$msg->imagen))}}" width="500px">
-
-</div>
-
-
-<p style="margin: 0 0 16px;">Gracias por tu compra.</p>
+																<div style="margin-bottom: 40px;">
+																@if ($msg->imagen)
+																<img src="{{$message->embed(storage_path('app/img/'.$msg->imagen))}}" width="500px">
+																@endif
+																</div>
+																<p style="margin: 0 0 16px;">Gracias por tu compra.</p>
 															</div>
 														</td>
 													</tr>
